@@ -1,8 +1,8 @@
 <resources>
     <string name="app_name">Stock Hawk</string>
 
-    <string name="action_example">Example action</string>
-
+    <!--<string name="action_example">Example action</string>-->
+    <string name="fab_description">Add Ticker Symbol</string>
     <string name="action_settings">Settings</string>
     <string name="action_change_units">Change Units</string>
     <string name="symbol_search">Symbol Search</string>
@@ -10,5 +10,15 @@
     <string name="input_hint">FB</string>
     <string name="input_prefill"></string>
     <string name="input_already_saved">"This stock is already saved!"</string>
-    <string name="network_toast">Uh-oh! This app requires an internet connection</string>
+
+    <!-- Empty Ticker Database -->
+    <string name="empty_ticker_list">No stock ticker information available.</string>
+    <string name="empty_ticker_list_no_network">The network is not available to fetch ticker data.</string>
+    <string name="empty_ticker_list_server_down">The server is not returning data.</string>
+    <string name="empty_ticker_list_server_error">The server is not returning valid data. Please check for an updated version of Stock Hawk.</string>
+    <string name="empty_ticker_list_invalid_ticker">Ticker is not recognized by server.</string>
+    <string name="pref_ticker_status_key">pref_ticker_status</string>
+    <string name="input_symbol_added">New Ticker Symbol Added</string>
+    <string name="action_retry">Retry</string>
+
 </resources>

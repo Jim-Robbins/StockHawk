@@ -1,11 +1,15 @@
 package com.sam_chordas.android.stockhawk.service;
 
+import android.content.ContentProviderOperation;
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.Intent;
 import android.content.OperationApplicationException;
 import android.database.Cursor;
 import android.database.DatabaseUtils;
 import android.os.RemoteException;
+import android.support.annotation.IntDef;
+import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
 import com.google.android.gms.gcm.GcmNetworkManager;
@@ -18,9 +22,16 @@ import com.squareup.okhttp.OkHttpClient;
 import com.squareup.okhttp.Request;
 import com.squareup.okhttp.Response;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.net.URLEncoder;
+import java.util.ArrayList;
 
 /**
  * Created by sam_chordas on 9/30/15.
@@ -31,25 +42,39 @@ public class StockTaskService extends GcmTaskService {
     private String LOG_TAG = StockTaskService.class.getSimpleName();
 
     private OkHttpClient client = new OkHttpClient();
+    private String responseBody;
     private Context mContext;
     private StringBuilder mStoredSymbols = new StringBuilder();
     private boolean isUpdate;
+
+    @Retention(RetentionPolicy.SOURCE)
+    @IntDef({TICKER_STATUS_OK,
+            TICKER_STATUS_ADDED,
+            TICKER_STATUS_EXISTS,
+            TICKER_STATUS_INVALID,
+            TICKER_STATUS_SERVER_DOWN,
+            TICKER_STATUS_SERVER_INVALID,
+            TICKER_STATUS_UNKNOWN
+    })
+    public @interface TickerStatus {
+    }
+
+    public static final int TICKER_STATUS_OK = 0;
+    public static final int TICKER_STATUS_ADDED = 1;
+    public static final int TICKER_STATUS_EXISTS = 2;
+    public static final int TICKER_STATUS_INVALID = 3;
+    public static final int TICKER_STATUS_SERVER_DOWN = 10;
+    public static final int TICKER_STATUS_SERVER_INVALID = 11;
+    public static final int TICKER_STATUS_UNKNOWN = 20;
+
+
+    public static final String ACTION_FAILURE = "GcmTaskService#ACTION_FAILURE";
 
     public StockTaskService() {
     }
 
     public StockTaskService(Context context) {
         mContext = context;
-    }
-
-    String fetchData(String url) throws IOException {
-        Request request = new Request.Builder()
-                .url(url)
-                .build();
-
-        Response response = client.newCall(request).execute();
-
-        return response.body().string();
     }
 
     @Override
@@ -64,28 +89,58 @@ public class StockTaskService extends GcmTaskService {
 
         if (urlStringBuilder != null) {
             String urlString = urlStringBuilder.toString();
-            try {
-                String getResponse = fetchData(urlString);
-                result = GcmNetworkManager.RESULT_SUCCESS;
-                try {
-                    ContentValues contentValues = new ContentValues();
-                    // update ISCURRENT to 0 (false) so new data is current
-                    if (isUpdate) {
-                        contentValues.put(QuoteColumns.ISCURRENT, 0);
-                        mContext.getContentResolver().update(QuoteProvider.Quotes.CONTENT_URI, contentValues,
-                                null, null);
-                    }
-                    mContext.getContentResolver().applyBatch(QuoteProvider.AUTHORITY,
-                            Utils.quoteJsonToContentVals(getResponse));
-                } catch (RemoteException | OperationApplicationException e) {
-                    Log.e(LOG_TAG, "Error applying batch insert", e);
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
+            result = fetchData(urlString);
+            if (result == GcmNetworkManager.RESULT_SUCCESS) {
+                processResponse(responseBody);
             }
+
         }
 
         return result;
+    }
+
+    private int fetchData(String url) {
+        Request request = new Request.Builder()
+                .url(url)
+                .build();
+
+        try {
+            Response response = client.newCall(request).execute();
+            responseBody = response.body().string();
+            Log.d(LOG_TAG, "fetchUrl:response:" + responseBody);
+
+            if (response.code() != 200) {
+                return GcmNetworkManager.RESULT_FAILURE;
+            }
+        } catch (IOException e) {
+            Log.e(LOG_TAG, "fetchUrl:error" + e.toString());
+            return GcmNetworkManager.RESULT_FAILURE;
+        }
+
+        return GcmNetworkManager.RESULT_SUCCESS;
+    }
+
+    private void processResponse(String getResponse) {
+        try {
+            ContentValues contentValues = new ContentValues();
+            // update ISCURRENT to 0 (false) so new data is current
+            if (isUpdate) {
+                contentValues.put(QuoteColumns.ISCURRENT, 0);
+                mContext.getContentResolver().update(QuoteProvider.Quotes.CONTENT_URI, contentValues,
+                        null, null);
+            }
+
+            ArrayList<ContentProviderOperation> batchOperations =
+                    quoteJsonToContentVals(getResponse);
+
+            if (batchOperations.size() > 0) {
+                mContext.getContentResolver().applyBatch(QuoteProvider.AUTHORITY,
+                        batchOperations);
+            }
+        } catch (RemoteException | OperationApplicationException e) {
+            Log.e(LOG_TAG, "Error applying batch insert", e);
+            setTickerStatus(TICKER_STATUS_UNKNOWN);
+        }
     }
 
     private StringBuilder getUrlStringBuilder(TaskParams params) {
@@ -97,6 +152,7 @@ public class StockTaskService extends GcmTaskService {
             urlStringBuilder.append(URLEncoder.encode("select * from yahoo.finance.quotes where symbol "
                     + "in (", "UTF-8"));
         } catch (UnsupportedEncodingException e) {
+            setTickerStatus(TICKER_STATUS_SERVER_INVALID);
             e.printStackTrace();
         }
 
@@ -130,6 +186,7 @@ public class StockTaskService extends GcmTaskService {
                 baseUrlStringBuilder.append(
                         URLEncoder.encode("\"YHOO\",\"AAPL\",\"GOOG\",\"MSFT\")", "UTF-8"));
             } catch (UnsupportedEncodingException e) {
+                setTickerStatus(TICKER_STATUS_SERVER_INVALID);
                 e.printStackTrace();
             }
         } else if (initQueryCursor != null) {
@@ -144,6 +201,7 @@ public class StockTaskService extends GcmTaskService {
             try {
                 baseUrlStringBuilder.append(URLEncoder.encode(mStoredSymbols.toString(), "UTF-8"));
             } catch (UnsupportedEncodingException e) {
+                setTickerStatus(TICKER_STATUS_SERVER_INVALID);
                 e.printStackTrace();
             }
         }
@@ -155,6 +213,78 @@ public class StockTaskService extends GcmTaskService {
             baseUrlStringBuilder.append(URLEncoder.encode("\"" + tickerSymbol + "\")", "UTF-8"));
         } catch (UnsupportedEncodingException e) {
             e.printStackTrace();
+            setTickerStatus(TICKER_STATUS_SERVER_INVALID);
         }
     }
+
+    public boolean isValidTickerSymbol(JSONObject jsonObject) {
+        boolean result = true;
+        try {
+            String bid = jsonObject.getString("Bid");
+            if (bid.equalsIgnoreCase("null")) {
+                result = false;
+            }
+        } catch (JSONException e) {
+            Log.e(LOG_TAG, "String to JSON failed: " + e);
+            setTickerStatus(TICKER_STATUS_UNKNOWN);
+            result = false;
+        }
+
+        return result;
+    }
+
+    public ArrayList quoteJsonToContentVals(String JSON) {
+        ArrayList<ContentProviderOperation> batchOperations = new ArrayList<>();
+        try {
+            JSONObject jsonObject = new JSONObject(JSON);
+            if (jsonObject != null && jsonObject.length() != 0) {
+                jsonObject = jsonObject.getJSONObject("query");
+                int count = Integer.parseInt(jsonObject.getString("count"));
+                if (count == 1) {
+                    jsonObject = jsonObject.getJSONObject("results")
+                            .getJSONObject("quote");
+                    if (isValidTickerSymbol(jsonObject)) {
+                        batchOperations.add(Utils.buildBatchOperation(jsonObject));
+                        setTickerStatus(TICKER_STATUS_ADDED);
+                    } else {
+                        setTickerStatus(TICKER_STATUS_INVALID);
+                        Log.d(LOG_TAG, "quoteJsonToContentVals - skipped it!");
+                    }
+                } else {
+                    JSONArray resultsArray = jsonObject.getJSONObject("results").getJSONArray("quote");
+
+                    if (resultsArray != null && resultsArray.length() != 0) {
+                        for (int i = 0; i < resultsArray.length(); i++) {
+                            jsonObject = resultsArray.getJSONObject(i);
+                            batchOperations.add(Utils.buildBatchOperation(jsonObject));
+                        }
+                    }
+                    setTickerStatus(TICKER_STATUS_OK);
+                }
+            }
+        } catch (JSONException e) {
+            Log.e(LOG_TAG, "String to JSON failed: " + e);
+            setTickerStatus(TICKER_STATUS_UNKNOWN);
+        }
+        return batchOperations;
+    }
+
+    private void setTickerStatus(@TickerStatus int tickerStatus) {
+        Utils.setTickerStatus(mContext, tickerStatus);
+
+        if (tickerStatus > 1) {
+            notifyOfFailure();
+        }
+    }
+
+    private void notifyOfFailure() {
+        // Create Intent to broadcast the task information.
+        Intent intent = new Intent();
+        intent.setAction(ACTION_FAILURE);
+
+        // Send local broadcast, running Activities will be notified about the task fail.
+        LocalBroadcastManager manager = LocalBroadcastManager.getInstance(this);
+        manager.sendBroadcast(intent);
+    }
+
 }

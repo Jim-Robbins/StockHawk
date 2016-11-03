@@ -2,19 +2,18 @@ package com.sam_chordas.android.stockhawk.rest;
 
 import android.content.ContentProviderOperation;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
-import android.text.TextUtils;
-import android.util.Log;
+import android.preference.PreferenceManager;
 
+import com.sam_chordas.android.stockhawk.R;
 import com.sam_chordas.android.stockhawk.data.QuoteColumns;
 import com.sam_chordas.android.stockhawk.data.QuoteProvider;
+import com.sam_chordas.android.stockhawk.service.StockTaskService;
 
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-
-import java.util.ArrayList;
 
 /**
  * Created by sam_chordas on 10/8/15.
@@ -24,55 +23,6 @@ public class Utils {
     private static String LOG_TAG = Utils.class.getSimpleName();
 
     public static boolean showPercent = true;
-
-    public static boolean isValidTickerSymbol(JSONObject jsonObject)
-    {
-        try {
-            String bid = jsonObject.getString("Bid");
-            if (bid.equalsIgnoreCase("null")) {
-                Log.w(LOG_TAG, "Symbol doesn't exist");
-                return false;
-            }
-
-        } catch (JSONException e) {
-            Log.e(LOG_TAG, "String to JSON failed: " + e);
-            return false;
-        }
-
-        return true;
-    }
-
-    public static ArrayList quoteJsonToContentVals(String JSON) {
-        ArrayList<ContentProviderOperation> batchOperations = new ArrayList<>();
-        JSONObject jsonObject = null;
-        JSONArray resultsArray = null;
-        try {
-            jsonObject = new JSONObject(JSON);
-            if (jsonObject != null && jsonObject.length() != 0) {
-                jsonObject = jsonObject.getJSONObject("query");
-                int count = Integer.parseInt(jsonObject.getString("count"));
-                if (count == 1) {
-                    jsonObject = jsonObject.getJSONObject("results")
-                            .getJSONObject("quote");
-                    if(isValidTickerSymbol(jsonObject)) {
-                        batchOperations.add(buildBatchOperation(jsonObject));
-                    }
-                } else {
-                    resultsArray = jsonObject.getJSONObject("results").getJSONArray("quote");
-
-                    if (resultsArray != null && resultsArray.length() != 0) {
-                        for (int i = 0; i < resultsArray.length(); i++) {
-                            jsonObject = resultsArray.getJSONObject(i);
-                            batchOperations.add(buildBatchOperation(jsonObject));
-                        }
-                    }
-                }
-            }
-        } catch (JSONException e) {
-            Log.e(LOG_TAG, "String to JSON failed: " + e);
-        }
-        return batchOperations;
-    }
 
     public static String truncateBidPrice(String bidPrice) {
         bidPrice = String.format("%.2f", Float.parseFloat(bidPrice));
@@ -124,6 +74,33 @@ public class Utils {
                 (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
 
-        return activeNetwork != null && activeNetwork.isConnectedOrConnecting();
+        boolean connected = activeNetwork != null && activeNetwork.isConnectedOrConnecting();
+        setTickerStatus(context, connected ? StockTaskService.TICKER_STATUS_OK : StockTaskService.TICKER_STATUS_UNKNOWN);
+        return connected;
+    }
+
+    /**
+     * Sets the ticker status into shared preference.  This function should not be called from
+     * the UI thread because it uses commit to write to the shared preferences.
+     *
+     * @param context      Context to get the PreferenceManager from.
+     * @param tickerStatus The IntDef value to set
+     */
+    public static void setTickerStatus(Context context, @StockTaskService.TickerStatus int tickerStatus) {
+        SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(context);
+        SharedPreferences.Editor spEditor = pref.edit();
+        spEditor.putInt(context.getString(R.string.pref_ticker_status_key), tickerStatus);
+        spEditor.commit();
+    }
+
+    /**
+     * Get the ticker status from the shared preference.
+     *
+     * @param context used to get the SharedPreference object
+     * @return the ticker status integer type
+     */
+    public static int getTickerStatus(Context context) {
+        SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(context);
+        return pref.getInt(context.getString(R.string.pref_ticker_status_key), StockTaskService.TICKER_STATUS_UNKNOWN);
     }
 }

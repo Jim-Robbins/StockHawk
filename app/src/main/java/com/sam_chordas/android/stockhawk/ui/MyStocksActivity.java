@@ -1,25 +1,28 @@
 package com.sam_chordas.android.stockhawk.ui;
 
 import android.app.LoaderManager;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.CursorLoader;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.Loader;
 import android.database.Cursor;
 import android.os.Bundle;
+import android.support.design.widget.Snackbar;
+import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.helper.ItemTouchHelper;
 import android.text.InputType;
-import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.Toast;
 
 import com.afollestad.materialdialogs.MaterialDialog;
+import com.facebook.stetho.Stetho;
 import com.google.android.gms.gcm.GcmNetworkManager;
 import com.google.android.gms.gcm.PeriodicTask;
 import com.google.android.gms.gcm.Task;
@@ -50,15 +53,22 @@ public class MyStocksActivity extends AppCompatActivity implements LoaderManager
     private QuoteCursorAdapter mCursorAdapter;
     private Context mContext;
     private Cursor mCursor;
-    boolean isConnected;
 
+    private BroadcastReceiver mReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (intent.getAction().equals(StockTaskService.ACTION_FAILURE)) {
+                updateSnackBarStatus();
+            }
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         mContext = this;
 
-        isConnected = Utils.isConnected(mContext);
+        Stetho.initializeWithDefaults(this);
 
         setContentView(R.layout.activity_my_stocks);
 
@@ -68,29 +78,87 @@ public class MyStocksActivity extends AppCompatActivity implements LoaderManager
         if (savedInstanceState == null) {
             // Run the initialize task service so that some stocks appear upon an empty database
             mServiceIntent.putExtra("tag", "init");
-            if (isConnected) {
+            if (Utils.isConnected(mContext)) {
                 startService(mServiceIntent);
-            } else {
-                networkToast();
             }
         }
 
         // Setup quote list and action button
-        setupViews();
+        updateUi();
 
         // Schedule quote updates
-        setupPeriodicStockPull();
+        scheduleDataPolling();
     }
-
 
     @Override
     public void onResume() {
         super.onResume();
         getLoaderManager().restartLoader(CURSOR_LOADER_ID, null, this);
+
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(StockTaskService.ACTION_FAILURE);
+
+        LocalBroadcastManager manager = LocalBroadcastManager.getInstance(this);
+        manager.registerReceiver(mReceiver, filter);
     }
 
-    public void networkToast() {
-        Toast.makeText(mContext, getString(R.string.network_toast), Toast.LENGTH_SHORT).show();
+    @Override
+    protected void onPause() {
+        super.onPause();
+        LocalBroadcastManager manager = LocalBroadcastManager.getInstance(this);
+        manager.unregisterReceiver(mReceiver);
+    }
+
+    /*
+       Updates the empty list view with contextually relevant information that the user can
+       use to determine why they aren't seeing weather.
+    */
+    private void updateSnackBarStatus() {
+        @StockTaskService.TickerStatus int tickerStatus = Utils.getTickerStatus(this);
+        if (tickerStatus > 0) {
+            int message = R.string.empty_ticker_list;
+            Snackbar snackbar = Snackbar
+                    .make(findViewById(android.R.id.content), message, Snackbar.LENGTH_LONG);
+
+            switch (tickerStatus) {
+                case StockTaskService.TICKER_STATUS_ADDED:
+                    message = R.string.input_symbol_added;
+                    break;
+                case StockTaskService.TICKER_STATUS_EXISTS:
+                    message = R.string.input_already_saved;
+                    break;
+                case StockTaskService.TICKER_STATUS_INVALID:
+                    message = R.string.empty_ticker_list_invalid_ticker;
+                    break;
+                case StockTaskService.TICKER_STATUS_SERVER_DOWN:
+                    snackbar.setDuration(Snackbar.LENGTH_INDEFINITE);
+                    message = R.string.empty_ticker_list_server_down;
+                    break;
+                case StockTaskService.TICKER_STATUS_SERVER_INVALID:
+                    snackbar.setDuration(Snackbar.LENGTH_INDEFINITE);
+                    message = R.string.empty_ticker_list_server_error;
+                    break;
+                default:
+                    if (!Utils.isConnected(mContext)) {
+                        message = R.string.empty_ticker_list_no_network;
+                        snackbar.setDuration(Snackbar.LENGTH_INDEFINITE);
+                        snackbar.setAction(R.string.action_retry, new View.OnClickListener() {
+                            @Override
+                            public void onClick(View view) {
+                                if (Utils.isConnected(mContext)) {
+                                    mServiceIntent.putExtra("tag", "init");
+                                    startService(mServiceIntent);
+                                } else {
+                                    updateSnackBarStatus();
+                                }
+                            }
+                        });
+                    }
+            }
+
+            snackbar.setText(message);
+            snackbar.show();
+        }
     }
 
     public void restoreActionBar() {
@@ -148,6 +216,7 @@ public class MyStocksActivity extends AppCompatActivity implements LoaderManager
     @Override
     public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
         mCursorAdapter.swapCursor(data);
+        updateSnackBarStatus();
         mCursor = data;
     }
 
@@ -156,7 +225,7 @@ public class MyStocksActivity extends AppCompatActivity implements LoaderManager
         mCursorAdapter.swapCursor(null);
     }
 
-    private void setupViews() {
+    private void updateUi() {
 
         // Setup our list of quotes
         RecyclerView recyclerView = (RecyclerView) findViewById(R.id.recycler_view);
@@ -178,12 +247,16 @@ public class MyStocksActivity extends AppCompatActivity implements LoaderManager
         mItemTouchHelper.attachToRecyclerView(recyclerView);
 
         mTitle = getTitle();
+
+        if (!Utils.isConnected(mContext)) {
+            updateSnackBarStatus();
+        }
     }
 
     private View.OnClickListener fabOnClickListener = new View.OnClickListener() {
         @Override
         public void onClick(View v) {
-            if (isConnected) {
+            if (Utils.isConnected(mContext)) {
                 new MaterialDialog.Builder(mContext).title(R.string.symbol_search)
                         .content(R.string.content_test)
                         .inputType(InputType.TYPE_CLASS_TEXT)
@@ -196,12 +269,8 @@ public class MyStocksActivity extends AppCompatActivity implements LoaderManager
                                         new String[]{QuoteColumns.SYMBOL}, QuoteColumns.SYMBOL + "= ?",
                                         new String[]{input.toString()}, null);
                                 if (c.getCount() != 0) {
-                                    Toast toast =
-                                            Toast.makeText(MyStocksActivity.this,
-                                                    getString(R.string.input_already_saved),
-                                                    Toast.LENGTH_LONG);
-                                    toast.setGravity(Gravity.CENTER, Gravity.CENTER, 0);
-                                    toast.show();
+                                    Utils.setTickerStatus(mContext, StockTaskService.TICKER_STATUS_EXISTS);
+                                    updateSnackBarStatus();
                                     return;
                                 } else {
                                     // Add the stock to DB
@@ -213,7 +282,7 @@ public class MyStocksActivity extends AppCompatActivity implements LoaderManager
                         })
                         .show();
             } else {
-                networkToast();
+                updateSnackBarStatus();
             }
 
         }
@@ -228,8 +297,8 @@ public class MyStocksActivity extends AppCompatActivity implements LoaderManager
                 }
             });
 
-    private void setupPeriodicStockPull() {
-        if (isConnected) {
+    private void scheduleDataPolling() {
+        if (Utils.isConnected(mContext)) {
             long period = 3600L;
             long flex = 10L;
             String periodicTag = "periodic";
