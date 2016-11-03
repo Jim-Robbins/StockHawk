@@ -271,20 +271,6 @@ public class StockTaskService extends GcmTaskService {
 
     private void setTickerStatus(@TickerStatus int tickerStatus) {
         Utils.setTickerStatus(mContext, tickerStatus);
-
-        if (tickerStatus > 1) {
-            notifyOfFailure();
-        }
-    }
-
-    private void notifyOfFailure() {
-        // Create Intent to broadcast the task information.
-        Intent intent = new Intent();
-        intent.setAction(ACTION_FAILURE);
-
-        // Send local broadcast, running Activities will be notified about the task fail.
-        LocalBroadcastManager manager = LocalBroadcastManager.getInstance(this);
-        manager.sendBroadcast(intent);
     }
 
 }

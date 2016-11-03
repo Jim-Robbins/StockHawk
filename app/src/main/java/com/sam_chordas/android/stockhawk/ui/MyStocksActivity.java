@@ -1,43 +1,32 @@
 package com.sam_chordas.android.stockhawk.ui;
 
-import android.app.LoaderManager;
-import android.content.BroadcastReceiver;
+
 import android.content.Context;
-import android.content.CursorLoader;
 import android.content.Intent;
-import android.content.IntentFilter;
-import android.content.Loader;
-import android.database.Cursor;
+import android.net.Uri;
 import android.os.Bundle;
-import android.support.design.widget.Snackbar;
-import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
-import android.support.v7.widget.helper.ItemTouchHelper;
-import android.text.InputType;
+import android.text.TextUtils;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
 
-import com.afollestad.materialdialogs.MaterialDialog;
 import com.facebook.stetho.Stetho;
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.gcm.GcmNetworkManager;
 import com.google.android.gms.gcm.PeriodicTask;
 import com.google.android.gms.gcm.Task;
-import com.melnykov.fab.FloatingActionButton;
 import com.sam_chordas.android.stockhawk.R;
-import com.sam_chordas.android.stockhawk.data.QuoteColumns;
 import com.sam_chordas.android.stockhawk.data.QuoteProvider;
-import com.sam_chordas.android.stockhawk.rest.QuoteCursorAdapter;
-import com.sam_chordas.android.stockhawk.rest.RecyclerViewItemClickListener;
 import com.sam_chordas.android.stockhawk.rest.Utils;
 import com.sam_chordas.android.stockhawk.service.StockIntentService;
 import com.sam_chordas.android.stockhawk.service.StockTaskService;
-import com.sam_chordas.android.stockhawk.touch_helper.SimpleItemTouchHelperCallback;
 
-public class MyStocksActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor> {
+
+public class MyStocksActivity extends AppCompatActivity implements StockListFragment.Callback {
+    private String LOG_TAG = MyStocksActivity.class.getSimpleName();
 
     /**
      * Fragment managing the behaviors, interactions and presentation of the navigation drawer.
@@ -48,20 +37,11 @@ public class MyStocksActivity extends AppCompatActivity implements LoaderManager
      */
     private CharSequence mTitle;
     private Intent mServiceIntent;
-    private ItemTouchHelper mItemTouchHelper;
-    private static final int CURSOR_LOADER_ID = 0;
-    private QuoteCursorAdapter mCursorAdapter;
-    private Context mContext;
-    private Cursor mCursor;
 
-    private BroadcastReceiver mReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            if (intent.getAction().equals(StockTaskService.ACTION_FAILURE)) {
-                updateSnackBarStatus();
-            }
-        }
-    };
+    private Context mContext;
+    private final static int PLAY_SERVICES_RESOLUTION_REQUEST = 9000;
+
+    private boolean mTwoPane;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -86,78 +66,10 @@ public class MyStocksActivity extends AppCompatActivity implements LoaderManager
         // Setup quote list and action button
         updateUi();
 
-        // Schedule quote updates
-        scheduleDataPolling();
-    }
-
-    @Override
-    public void onResume() {
-        super.onResume();
-        getLoaderManager().restartLoader(CURSOR_LOADER_ID, null, this);
-
-        IntentFilter filter = new IntentFilter();
-        filter.addAction(StockTaskService.ACTION_FAILURE);
-
-        LocalBroadcastManager manager = LocalBroadcastManager.getInstance(this);
-        manager.registerReceiver(mReceiver, filter);
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        LocalBroadcastManager manager = LocalBroadcastManager.getInstance(this);
-        manager.unregisterReceiver(mReceiver);
-    }
-
-    /*
-       Updates the empty list view with contextually relevant information that the user can
-       use to determine why they aren't seeing weather.
-    */
-    private void updateSnackBarStatus() {
-        @StockTaskService.TickerStatus int tickerStatus = Utils.getTickerStatus(this);
-        if (tickerStatus > 0) {
-            int message = R.string.empty_ticker_list;
-            Snackbar snackbar = Snackbar
-                    .make(findViewById(android.R.id.content), message, Snackbar.LENGTH_LONG);
-
-            switch (tickerStatus) {
-                case StockTaskService.TICKER_STATUS_ADDED:
-                    message = R.string.input_symbol_added;
-                    break;
-                case StockTaskService.TICKER_STATUS_EXISTS:
-                    message = R.string.input_already_saved;
-                    break;
-                case StockTaskService.TICKER_STATUS_INVALID:
-                    message = R.string.empty_ticker_list_invalid_ticker;
-                    break;
-                case StockTaskService.TICKER_STATUS_SERVER_DOWN:
-                    snackbar.setDuration(Snackbar.LENGTH_INDEFINITE);
-                    message = R.string.empty_ticker_list_server_down;
-                    break;
-                case StockTaskService.TICKER_STATUS_SERVER_INVALID:
-                    snackbar.setDuration(Snackbar.LENGTH_INDEFINITE);
-                    message = R.string.empty_ticker_list_server_error;
-                    break;
-                default:
-                    if (!Utils.isConnected(mContext)) {
-                        message = R.string.empty_ticker_list_no_network;
-                        snackbar.setDuration(Snackbar.LENGTH_INDEFINITE);
-                        snackbar.setAction(R.string.action_retry, new View.OnClickListener() {
-                            @Override
-                            public void onClick(View view) {
-                                if (Utils.isConnected(mContext)) {
-                                    mServiceIntent.putExtra("tag", "init");
-                                    startService(mServiceIntent);
-                                } else {
-                                    updateSnackBarStatus();
-                                }
-                            }
-                        });
-                    }
-            }
-
-            snackbar.setText(message);
-            snackbar.show();
+        // If Google Play Services is up to date, we'll want to schedule data polls
+        if (checkPlayServices()) {
+            // Schedule quote updates
+            scheduleDataPolling();
         }
     }
 
@@ -197,105 +109,23 @@ public class MyStocksActivity extends AppCompatActivity implements LoaderManager
     }
 
     @Override
-    public Loader<Cursor> onCreateLoader(int id, Bundle args) {
-        // This narrows the return to only the stocks that are most current.
-        return new CursorLoader(this, QuoteProvider.Quotes.CONTENT_URI,
-                new String[]{
-                        QuoteColumns._ID,
-                        QuoteColumns.SYMBOL,
-                        QuoteColumns.BIDPRICE,
-                        QuoteColumns.PERCENT_CHANGE,
-                        QuoteColumns.CHANGE,
-                        QuoteColumns.ISUP
-                },
-                QuoteColumns.ISCURRENT + " = ?",
-                new String[]{"1"},
-                null);
+    public void onUserInput(String tag, String symbol) {
+        // Add the stock to DB
+        mServiceIntent.putExtra("tag", tag);
+        if(!TextUtils.isEmpty(symbol)) {
+            mServiceIntent.putExtra("symbol", symbol);
+        }
+        mContext.startService(mServiceIntent);
     }
 
     @Override
-    public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
-        mCursorAdapter.swapCursor(data);
-        updateSnackBarStatus();
-        mCursor = data;
-    }
-
-    @Override
-    public void onLoaderReset(Loader<Cursor> loader) {
-        mCursorAdapter.swapCursor(null);
+    public void onItemSelected(Uri contentUri) {
+        Log.d(LOG_TAG, contentUri.toString());
     }
 
     private void updateUi() {
-
-        // Setup our list of quotes
-        RecyclerView recyclerView = (RecyclerView) findViewById(R.id.recycler_view);
-        recyclerView.setLayoutManager(new LinearLayoutManager(this));
-        getLoaderManager().initLoader(CURSOR_LOADER_ID, null, this);
-
-        mCursorAdapter = new QuoteCursorAdapter(this, null);
-        recyclerView.addOnItemTouchListener(recyclerViewItemClickListener);
-        recyclerView.setAdapter(mCursorAdapter);
-
-        // Setup the (+) button for adding new quotes
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.attachToRecyclerView(recyclerView);
-        fab.setOnClickListener(fabOnClickListener);
-
-        // Enable swipe to delete quotes
-        ItemTouchHelper.Callback callback = new SimpleItemTouchHelperCallback(mCursorAdapter);
-        mItemTouchHelper = new ItemTouchHelper(callback);
-        mItemTouchHelper.attachToRecyclerView(recyclerView);
-
         mTitle = getTitle();
-
-        if (!Utils.isConnected(mContext)) {
-            updateSnackBarStatus();
-        }
     }
-
-    private View.OnClickListener fabOnClickListener = new View.OnClickListener() {
-        @Override
-        public void onClick(View v) {
-            if (Utils.isConnected(mContext)) {
-                new MaterialDialog.Builder(mContext).title(R.string.symbol_search)
-                        .content(R.string.content_test)
-                        .inputType(InputType.TYPE_CLASS_TEXT)
-                        .input(R.string.input_hint, R.string.input_prefill, new MaterialDialog.InputCallback() {
-                            @Override
-                            public void onInput(MaterialDialog dialog, CharSequence input) {
-                                // On FAB click, receive user input. Make sure the stock doesn't already exist
-                                // in the DB and proceed accordingly
-                                Cursor c = getContentResolver().query(QuoteProvider.Quotes.CONTENT_URI,
-                                        new String[]{QuoteColumns.SYMBOL}, QuoteColumns.SYMBOL + "= ?",
-                                        new String[]{input.toString()}, null);
-                                if (c.getCount() != 0) {
-                                    Utils.setTickerStatus(mContext, StockTaskService.TICKER_STATUS_EXISTS);
-                                    updateSnackBarStatus();
-                                    return;
-                                } else {
-                                    // Add the stock to DB
-                                    mServiceIntent.putExtra("tag", "add");
-                                    mServiceIntent.putExtra("symbol", input.toString());
-                                    startService(mServiceIntent);
-                                }
-                            }
-                        })
-                        .show();
-            } else {
-                updateSnackBarStatus();
-            }
-
-        }
-    };
-
-    private RecyclerViewItemClickListener recyclerViewItemClickListener =
-            new RecyclerViewItemClickListener(mContext, new RecyclerViewItemClickListener.OnItemClickListener() {
-                @Override
-                public void onItemClick(View v, int position) {
-                    //TODO:
-                    // do something on item click
-                }
-            });
 
     private void scheduleDataPolling() {
         if (Utils.isConnected(mContext)) {
@@ -317,5 +147,26 @@ public class MyStocksActivity extends AppCompatActivity implements LoaderManager
             // are updated.
             GcmNetworkManager.getInstance(this).schedule(periodicTask);
         }
+    }
+
+    /**
+     * Check the device to make sure it has the Google Play Services APK. If
+     * it doesn't, display a dialog that allows users to download the APK from
+     * the Google Play Store or enable it in the device's system settings.
+     */
+    private boolean checkPlayServices() {
+        GoogleApiAvailability apiAvailability = GoogleApiAvailability.getInstance();
+        int resultCode = apiAvailability.isGooglePlayServicesAvailable(this);
+        if (resultCode != ConnectionResult.SUCCESS) {
+            if (apiAvailability.isUserResolvableError(resultCode)) {
+                apiAvailability.getErrorDialog(this, resultCode,
+                        PLAY_SERVICES_RESOLUTION_REQUEST).show();
+            } else {
+                Log.i(LOG_TAG, "This device is not supported.");
+                finish();
+            }
+            return false;
+        }
+        return true;
     }
 }
