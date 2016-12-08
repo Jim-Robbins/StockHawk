@@ -28,6 +28,15 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".ui.DetailActivity"
+            android:label="@string/title_activity_detail"
+            android:parentActivityName=".ui.MyStocksActivity"
+            android:theme="@style/AppTheme.Details">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".ui.MyStocksActivity" />
+        </activity>
 
         <service
             android:name="com.sam_chordas.android.stockhawk.service.StockTaskService"

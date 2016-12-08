@@ -26,6 +26,47 @@ public class QuoteColumns {
     @NotNull
     public static final String BIDPRICE = "bid_price";
     @DataType(DataType.Type.TEXT)
+    @NotNull
+    public static final String OPEN = "Open";
+    @DataType(DataType.Type.TEXT)
+    @NotNull
+    public static final String CLOSE = "PreviousClose";
+    @DataType(DataType.Type.TEXT)
+    @NotNull
+    public static final String AVG_DAILY_VOL = "AverageDailyVolume";
+    @DataType(DataType.Type.TEXT)
+    @NotNull
+    public static final String VOLUME = "Volume";
+    @DataType(DataType.Type.TEXT)
+    @NotNull
+    public static final String DAY_HIGH = "DaysHigh";
+    @DataType(DataType.Type.TEXT)
+    @NotNull
+    public static final String DAY_LOW = "DaysLow";
+    @DataType(DataType.Type.TEXT)
+    @NotNull
+    public static final String YEAR_HIGH = "YearHigh";
+    @DataType(DataType.Type.TEXT)
+    @NotNull
+    public static final String YEAR_LOW = "YearLow";
+    @DataType(DataType.Type.TEXT)
+    @NotNull
+    public static final String MARKET_CAP = "MarketCapitalization";
+    @DataType(DataType.Type.TEXT)
+    @NotNull
+    public static final String DIV_YIELD = "DividendYield";
+    @DataType(DataType.Type.TEXT)
+    @NotNull
+    public static final String EPS = "EarningsShare";
+    @DataType(DataType.Type.TEXT)
+    @NotNull
+    public static final String PE = "PERatio";
+
+    @DataType(DataType.Type.TEXT)
+    @NotNull
+    public static final String ONE_YR_TARGET = "OneyrTargetPrice";
+
+    @DataType(DataType.Type.TEXT)
     public static final String CREATED = "created";
     @DataType(DataType.Type.INTEGER)
     @NotNull

@@ -5,6 +5,9 @@
     <string name="fab_description">Add Ticker Symbol</string>
     <string name="action_settings">Settings</string>
     <string name="action_change_units">Change Units</string>
+
+    <string name="title_activity_detail">Details</string>
+
     <string name="symbol_search">Symbol Search</string>
     <string name="content_test">Search for a Stock Symbol</string>
     <string name="input_hint">FB</string>
@@ -20,5 +23,21 @@
     <string name="pref_ticker_status_key">pref_ticker_status</string>
     <string name="input_symbol_added">New Ticker Symbol Added</string>
     <string name="action_retry">Retry</string>
+    <string name="detail_stock_current_price_label">Current Price:</string>
+    <string name="detail_stock_key_stats_label">Key Statistics</string>
+    <string name="detail_stock_days_low_label">Day Low</string>
+    <string name="detail_stock_year_low_label">52w Low</string>
+    <string name="detail_stock_days_high_label">Day High</string>
+    <string name="detail_stock_year_high_label">52w High</string>
+    <string name="detail_stock_open_label">Open</string>
+    <string name="detail_stock_close_label">Prev Close</string>
+    <string name="detail_stock_volume_label">Volume</string>
+    <string name="detail_stock_avg_volume_label">Avg Vol</string>
+    <string name="detail_stock_market_cap_label">Market Cap</string>
+    <string name="detail_stock_dividend_label">Dividend</string>
+    <string name="detail_stock_one_yr_target_label">1Y Target</string>
+    <string name="detail_stock_pe_label">P/E</string>
+    <string name="detail_stock_eps_label">EPS</string>
+
 
 </resources>

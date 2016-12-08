@@ -6,11 +6,15 @@ import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.preference.PreferenceManager;
+import android.util.Log;
 
 import com.sam_chordas.android.stockhawk.R;
 import com.sam_chordas.android.stockhawk.data.QuoteColumns;
 import com.sam_chordas.android.stockhawk.data.QuoteProvider;
 import com.sam_chordas.android.stockhawk.service.StockTaskService;
+
+import net.simonvt.schematic.annotation.DataType;
+import net.simonvt.schematic.annotation.NotNull;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -37,12 +41,18 @@ public class Utils {
             change = change.substring(0, change.length() - 1);
         }
         change = change.substring(1, change.length());
-        double round = (double) Math.round(Double.parseDouble(change) * 100) / 100;
-        change = String.format("%.2f", round);
-        StringBuffer changeBuffer = new StringBuffer(change);
-        changeBuffer.insert(0, weight);
-        changeBuffer.append(ampersand);
-        change = changeBuffer.toString();
+        try {
+            if(change.indexOf("ul") > 0) return change;
+            Log.d(LOG_TAG,change);
+            double round = (double) Math.round(Double.parseDouble(change) * 100) / 100;
+            change = String.format("%.2f", round);
+            StringBuffer changeBuffer = new StringBuffer(change);
+            changeBuffer.insert(0, weight);
+            changeBuffer.append(ampersand);
+            change = changeBuffer.toString();
+        } catch (Error e) {
+            Log.e(LOG_TAG, "Not able to truncate string:"+ change);
+        }
         return change;
     }
 
@@ -56,13 +66,25 @@ public class Utils {
             builder.withValue(QuoteColumns.PERCENT_CHANGE, truncateChange(
                     jsonObject.getString("ChangeinPercent"), true));
             builder.withValue(QuoteColumns.CHANGE, truncateChange(change, false));
+            builder.withValue(QuoteColumns.OPEN, jsonObject.getString("Open"));
+            builder.withValue(QuoteColumns.CLOSE, jsonObject.getString("PreviousClose"));
+            builder.withValue(QuoteColumns.AVG_DAILY_VOL, jsonObject.getString("AverageDailyVolume"));
+            builder.withValue(QuoteColumns.VOLUME, jsonObject.getString("Volume"));
+            builder.withValue(QuoteColumns.DAY_HIGH, jsonObject.getString("DaysHigh"));
+            builder.withValue(QuoteColumns.DAY_LOW, jsonObject.getString("DaysLow"));
+            builder.withValue(QuoteColumns.YEAR_HIGH, jsonObject.getString("YearHigh"));
+            builder.withValue(QuoteColumns.YEAR_LOW, jsonObject.getString("YearLow"));
+            builder.withValue(QuoteColumns.MARKET_CAP, jsonObject.getString("MarketCapitalization"));
+            builder.withValue(QuoteColumns.DIV_YIELD, jsonObject.getString("DividendYield"));
+            builder.withValue(QuoteColumns.EPS, jsonObject.getString("EarningsShare"));
+            builder.withValue(QuoteColumns.PE, jsonObject.getString("PERatio"));
+            builder.withValue(QuoteColumns.ONE_YR_TARGET, jsonObject.getString("OneyrTargetPrice"));
             builder.withValue(QuoteColumns.ISCURRENT, 1);
             if (change.charAt(0) == '-') {
                 builder.withValue(QuoteColumns.ISUP, 0);
             } else {
                 builder.withValue(QuoteColumns.ISUP, 1);
             }
-
         } catch (JSONException e) {
             e.printStackTrace();
         }

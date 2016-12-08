@@ -5,12 +5,16 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.app.ActivityOptionsCompat;
+import android.support.v4.util.Pair;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 
 import com.facebook.stetho.Stetho;
 import com.google.android.gms.common.ConnectionResult;
@@ -37,6 +41,7 @@ public class MyStocksActivity extends AppCompatActivity implements StockListFrag
      */
     private CharSequence mTitle;
     private Intent mServiceIntent;
+    private static final String STOCKFRAGMENT_TAG = "STKTAG";
 
     private Context mContext;
     private final static int PLAY_SERVICES_RESOLUTION_REQUEST = 9000;
@@ -121,6 +126,28 @@ public class MyStocksActivity extends AppCompatActivity implements StockListFrag
     @Override
     public void onItemSelected(Uri contentUri) {
         Log.d(LOG_TAG, contentUri.toString());
+        if (mTwoPane) {
+            // In two-pane mode, show the detail view in this activity by
+            // adding or replacing the detail fragment using a
+            // fragment transaction.
+            Bundle args = new Bundle();
+            args.putParcelable(DetailFragment.DETAIL_URI, contentUri);
+
+            DetailFragment fragment = new DetailFragment();
+            fragment.setArguments(args);
+
+            getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.stock_detail_container, fragment, STOCKFRAGMENT_TAG)
+                    .commit();
+        } else {
+            Intent intent = new Intent(this, DetailActivity.class)
+                    .setData(contentUri);
+            startActivity(intent);
+//            ActivityOptionsCompat activityOptions =
+//                    ActivityOptionsCompat.makeSceneTransitionAnimation(this,
+//                            new Pair<View, String>(vh.mIconView, getString(R.string.detail_icon_transition_name)));
+//            ActivityCompat.startActivity(this, intent, activityOptions.toBundle());
+        }
     }
 
     private void updateUi() {

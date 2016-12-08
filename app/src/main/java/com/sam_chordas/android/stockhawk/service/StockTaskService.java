@@ -11,6 +11,7 @@ import android.os.RemoteException;
 import android.support.annotation.IntDef;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
+import android.widget.Toast;
 
 import com.google.android.gms.gcm.GcmNetworkManager;
 import com.google.android.gms.gcm.GcmTaskService;
@@ -31,7 +32,9 @@ import java.io.UnsupportedEncodingException;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.net.URLEncoder;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 
 /**
  * Created by sam_chordas on 9/30/15.
@@ -91,7 +94,11 @@ public class StockTaskService extends GcmTaskService {
             String urlString = urlStringBuilder.toString();
             result = fetchData(urlString);
             if (result == GcmNetworkManager.RESULT_SUCCESS) {
-                processResponse(responseBody);
+                if (params.getTag().equals("history")) {
+                    Log.d(LOG_TAG, "Parse historical data");
+                } else {
+                    processResponse(responseBody);
+                }
             }
 
         }
@@ -146,11 +153,18 @@ public class StockTaskService extends GcmTaskService {
     private StringBuilder getUrlStringBuilder(TaskParams params) {
         StringBuilder urlStringBuilder = new StringBuilder();
 
+        // Base URL for the Yahoo query
+        urlStringBuilder.append("https://query.yahooapis.com/v1/public/yql?q=");
         try {
-            // Base URL for the Yahoo query
-            urlStringBuilder.append("https://query.yahooapis.com/v1/public/yql?q=");
-            urlStringBuilder.append(URLEncoder.encode("select * from yahoo.finance.quotes where symbol "
+            String dataTable;
+            if (params.getTag().equals("history")) {
+                dataTable = "yahoo.finance.historicaldata";
+            } else {
+                dataTable = "yahoo.finance.quotes";
+            }
+            urlStringBuilder.append(URLEncoder.encode("select * from " + dataTable + " where symbol "
                     + "in (", "UTF-8"));
+
         } catch (UnsupportedEncodingException e) {
             setTickerStatus(TICKER_STATUS_SERVER_INVALID);
             e.printStackTrace();
@@ -166,10 +180,25 @@ public class StockTaskService extends GcmTaskService {
             appendNewTickerSymbol(urlStringBuilder, stockInput);
         }
 
+        if (params.getTag().equals("history")) {
+            String stockInput = params.getExtras().getString("symbol");
+            appendNewTickerSymbol(urlStringBuilder, stockInput);
+            // Initialize the formatter
+            SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd");
+            // initialize calendar object
+            Calendar cal = Calendar.getInstance();
+            String endDate = simpleDateFormat.format(cal.getTime());
+            cal.add(Calendar.YEAR, -1);
+            String startDate = simpleDateFormat.format(cal.getTime());
+
+            urlStringBuilder.append("and startDate = \""+startDate.toString()+"\" and endDate = \""+endDate.toString()+"\"");
+        }
+
         // finalize the URL for the API query.
         urlStringBuilder.append("&format=json&diagnostics=true&env=store%3A%2F%2Fdatatables."
-                + "org%2Falltableswithkeys&callback=");
+                + "org%2Falltableswithkeys&callback=&a=01&b=19&c=2010&d=01&e=19&f=2010&g=d");
 
+        Log.d(LOG_TAG, urlStringBuilder.toString());
         return urlStringBuilder;
     }
 
