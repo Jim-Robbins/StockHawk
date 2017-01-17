@@ -2,7 +2,7 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="?android:attr/listPreferredItemHeight"
+    android:layout_height="@dimen/list_item_height"
     android:gravity="center_vertical"
     android:orientation="horizontal"
     android:paddingLeft="@dimen/list_item_padding"
@@ -29,8 +29,8 @@
             style="@style/BidPriceTextStyle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:marginRight="@dimen/list_item_text_view_padding"
-            android:marginEnd="@dimen/list_item_text_view_padding"
+            android:layout_marginRight="@dimen/list_item_text_view_padding"
+            android:layout_marginEnd="@dimen/list_item_text_view_padding"
             tools:text="1000.00" />
 
         <TextView
