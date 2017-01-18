@@ -20,6 +20,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TimeZone;
 
 import timber.log.Timber;
 import yahoofinance.Stock;
@@ -78,7 +79,16 @@ public final class QuoteSyncJob {
                 float price = quote.getPrice().floatValue();
                 float change = quote.getChange().floatValue();
                 float percentChange = quote.getChangeInPercent().floatValue();
-
+                float open = quote.getOpen().floatValue();
+                float previousClose = quote.getPreviousClose().floatValue();
+                float averageDailyVolume = quote.getAvgVolume().floatValue();
+                float volume = quote.getVolume().floatValue();
+                float days_high = quote.getDayHigh().floatValue();
+                float days_low = quote.getDayLow().floatValue();
+                float year_high = quote.getYearHigh().floatValue();
+                float year_low = quote.getYearLow().floatValue();
+                TimeZone tz = quote.getTimeZone();
+                Calendar calendar = quote.getLastTradeTime(tz);
                 // WARNING! Don't request historical data for a stock that doesn't exist!
                 // The request will hang forever X_x
                 List<HistoricalQuote> history = stock.getHistory(from, to, Interval.WEEKLY);
@@ -97,9 +107,15 @@ public final class QuoteSyncJob {
                 quoteCV.put(Contract.Quote.COLUMN_PRICE, price);
                 quoteCV.put(Contract.Quote.COLUMN_PERCENTAGE_CHANGE, percentChange);
                 quoteCV.put(Contract.Quote.COLUMN_ABSOLUTE_CHANGE, change);
-
-
                 quoteCV.put(Contract.Quote.COLUMN_HISTORY, historyBuilder.toString());
+                quoteCV.put(Contract.Quote.COLUMN_OPEN, open);
+                quoteCV.put(Contract.Quote.COLUMN_PREVIOUS_CLOSE, previousClose);
+                quoteCV.put(Contract.Quote.COLUMN_AVG_DAILY_VOLUME, averageDailyVolume);
+                quoteCV.put(Contract.Quote.COLUMN_VOLUME, volume);
+                quoteCV.put(Contract.Quote.COLUMN_DAYS_HIGH, days_high);
+                quoteCV.put(Contract.Quote.COLUMN_DAYS_LOW, days_low);
+                quoteCV.put(Contract.Quote.COLUMN_YEAR_HIGH, year_high);
+                quoteCV.put(Contract.Quote.COLUMN_YEAR_LOW, year_low);
 
                 quoteCVs.add(quoteCV);
 

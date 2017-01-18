@@ -33,18 +33,13 @@ public final class Contract {
         public static final String COLUMN_DAYS_LOW = "days_low";
         public static final String COLUMN_YEAR_HIGH = "year_high";
         public static final String COLUMN_YEAR_LOW = "year_low";
-        public static final String COLUMN_MARKET_CAP = "market_capitalization";
-        public static final String COLUMN_DIVIDEND_YIELD = "dividend_yield";
-        public static final String COLUMN_EPS = "earnings_per_share";
-        public static final String COLUMN_PE_RATIO = "price_earnings_ratio";
-        public static final String COLUMN_ONE_YEAR_TARGET = "one_year_target_price";
         public static final String COLUMN_CREATED = "created";
 
-        public static final int POSITION_ID = 0;
         public static final int POSITION_SYMBOL = 1;
         public static final int POSITION_PRICE = 2;
         public static final int POSITION_ABSOLUTE_CHANGE = 3;
         public static final int POSITION_PERCENTAGE_CHANGE = 4;
+        public static final int POSITION_HISTORY = 5;
         public static final int POSITION_OPEN = 6;
         public static final int POSITION_PREVIOUS_CLOSE = 7;
         public static final int POSITION_AVG_DAILY_VOLUME = 8;
@@ -74,11 +69,6 @@ public final class Contract {
                 COLUMN_DAYS_LOW,
                 COLUMN_YEAR_HIGH,
                 COLUMN_YEAR_LOW,
-                COLUMN_MARKET_CAP,
-                COLUMN_DIVIDEND_YIELD,
-                COLUMN_EPS,
-                COLUMN_PE_RATIO,
-                COLUMN_ONE_YEAR_TARGET,
                 COLUMN_CREATED
         );
         static final String TABLE_NAME = "quotes";

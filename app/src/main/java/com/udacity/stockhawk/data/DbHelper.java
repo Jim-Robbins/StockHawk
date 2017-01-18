@@ -35,11 +35,6 @@ class DbHelper extends SQLiteOpenHelper {
                 + Quote.COLUMN_DAYS_LOW + " TEXT, "
                 + Quote.COLUMN_YEAR_HIGH + " TEXT, "
                 + Quote.COLUMN_YEAR_LOW + " TEXT, "
-                + Quote.COLUMN_MARKET_CAP + " TEXT, "
-                + Quote.COLUMN_DIVIDEND_YIELD + " TEXT, "
-                + Quote.COLUMN_EPS + " TEXT, "
-                + Quote.COLUMN_PE_RATIO + " TEXT, "
-                + Quote.COLUMN_ONE_YEAR_TARGET + " TEXT, "
                 + Quote.COLUMN_CREATED + " TEXT, "
                 + "UNIQUE (" + Quote.COLUMN_SYMBOL + ") ON CONFLICT REPLACE);";
 

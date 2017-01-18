@@ -9,7 +9,7 @@
 
     <TextView
         android:id="@+id/detail_text_label"
-        style="@style/LabelTextStyle"
+        style="@style/LabelTextStyleIndented"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1" />

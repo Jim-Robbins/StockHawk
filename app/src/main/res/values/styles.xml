@@ -31,6 +31,9 @@
         <item name="android:textColor">@color/secondary_text</item>
         <item name="android:textStyle">bold|normal</item>
         <item name="android:textSize">@dimen/medium_font_size</item>
+    </style>
+
+    <style name="LabelTextStyleIndented" parent="@style/LabelTextStyle">
         <item name="android:layout_marginLeft">@dimen/med_space</item>
     </style>
 

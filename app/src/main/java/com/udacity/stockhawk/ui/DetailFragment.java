@@ -8,6 +8,7 @@ import android.support.v4.app.Fragment;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
+import android.support.v4.content.res.ResourcesCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -18,6 +19,10 @@ import android.widget.TextView;
 import com.udacity.stockhawk.data.Contract;
 import com.udacity.stockhawk.R;
 
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
+import java.util.Locale;
+
 public class DetailFragment extends Fragment implements LoaderManager.LoaderCallbacks<Cursor> {
 
     static final String DETAIL_URI = "URI";
@@ -26,27 +31,6 @@ public class DetailFragment extends Fragment implements LoaderManager.LoaderCall
     private boolean mTransitionAnimation;
 
     private static final int DETAIL_LOADER = 0;
-
-    private static final String[] DETAIL_COLUMNS = {
-            Contract.Quote.COLUMN_SYMBOL,
-            Contract.Quote.COLUMN_PERCENTAGE_CHANGE,
-            Contract.Quote.COLUMN_ABSOLUTE_CHANGE,
-            Contract.Quote.COLUMN_PRICE,
-            Contract.Quote.COLUMN_OPEN,
-            Contract.Quote.COLUMN_PREVIOUS_CLOSE,
-            Contract.Quote.COLUMN_AVG_DAILY_VOLUME,
-            Contract.Quote.COLUMN_VOLUME,
-            Contract.Quote.COLUMN_DAYS_HIGH,
-            Contract.Quote.COLUMN_DAYS_LOW,
-            Contract.Quote.COLUMN_YEAR_HIGH,
-            Contract.Quote.COLUMN_YEAR_LOW,
-            Contract.Quote.COLUMN_MARKET_CAP,
-            Contract.Quote.COLUMN_DIVIDEND_YIELD,
-            Contract.Quote.COLUMN_EPS,
-            Contract.Quote.COLUMN_PE_RATIO,
-            Contract.Quote.COLUMN_ONE_YEAR_TARGET,
-            Contract.Quote.COLUMN_CREATED
-    };
 
     private TextView mSymbolView;
     private TextView mBidPriceView;
@@ -60,15 +44,22 @@ public class DetailFragment extends Fragment implements LoaderManager.LoaderCall
     private LinearLayout mCloseView;
     private LinearLayout mVolumeView;
     private LinearLayout mAvgVolumeView;
-    private LinearLayout mMarketCapView;
-    private LinearLayout mDividendView;
-    private LinearLayout mEPSView;
-    private LinearLayout mPEView;
-    private LinearLayout mOneYrTargetView;
+
+    private DecimalFormat dollarFormatWithPlus;
+    private DecimalFormat dollarFormat;
+    private DecimalFormat percentageFormat;
 
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        dollarFormat = (DecimalFormat) NumberFormat.getCurrencyInstance(Locale.US);
+        dollarFormatWithPlus = (DecimalFormat) NumberFormat.getCurrencyInstance(Locale.US);
+        dollarFormatWithPlus.setPositivePrefix("+$");
+        percentageFormat = (DecimalFormat) NumberFormat.getPercentInstance(Locale.getDefault());
+        percentageFormat.setMaximumFractionDigits(2);
+        percentageFormat.setMinimumFractionDigits(2);
+        percentageFormat.setPositivePrefix("+");
+
         Bundle arguments = getArguments();
         if (arguments != null) {
             mUri = arguments.getParcelable(DetailFragment.DETAIL_URI);
@@ -88,11 +79,6 @@ public class DetailFragment extends Fragment implements LoaderManager.LoaderCall
         mCloseView = (LinearLayout) rootView.findViewById(R.id.detail_stock_close);
         mVolumeView = (LinearLayout) rootView.findViewById(R.id.detail_stock_vol);
         mAvgVolumeView = (LinearLayout) rootView.findViewById(R.id.detail_stock_avg_vol);
-        mMarketCapView = (LinearLayout) rootView.findViewById(R.id.detail_stock_market_cap);
-        mDividendView = (LinearLayout) rootView.findViewById(R.id.detail_stock_dividend);
-        mEPSView = (LinearLayout) rootView.findViewById(R.id.detail_stock_eps);
-        mPEView = (LinearLayout) rootView.findViewById(R.id.detail_stock_pe);
-        mOneYrTargetView = (LinearLayout) rootView.findViewById(R.id.detail_stock_one_yr_target_price);
 
         return rootView;
     }
@@ -106,12 +92,9 @@ public class DetailFragment extends Fragment implements LoaderManager.LoaderCall
     @Override
     public Loader<Cursor> onCreateLoader(int id, Bundle args) {
         if (null != mUri) {
-            // Now create and return a CursorLoader that will take care of
-            // creating a Cursor for the data being displayed.
-            return new CursorLoader(
-                    getActivity(),
+            return new CursorLoader(getActivity(),
                     mUri,
-                    DETAIL_COLUMNS,
+                    Contract.Quote.QUOTE_COLUMNS.toArray(new String[]{}),
                     null,
                     null,
                     null
@@ -124,7 +107,6 @@ public class DetailFragment extends Fragment implements LoaderManager.LoaderCall
     @Override
     public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
         if (data != null && data.moveToFirst()) {
-            // Read weather condition ID from cursor
             setTextViews(data);
         }
 
@@ -151,45 +133,51 @@ public class DetailFragment extends Fragment implements LoaderManager.LoaderCall
 
     private void setTextViews(Cursor data) {
         mSymbolView.setText(data.getString(Contract.Quote.POSITION_SYMBOL));
-        mBidPriceView.setText(data.getString(Contract.Quote.POSITION_PRICE));
+        mBidPriceView.setText(dollarFormat.format(data.getFloat(Contract.Quote.POSITION_PRICE)));
 
-        mChangeView.setText(data.getString(Contract.Quote.POSITION_ABSOLUTE_CHANGE));
-        mChangePercentView.setText("("+data.getString(Contract.Quote.POSITION_PERCENTAGE_CHANGE)+")");
-//        int color;
-//        if (data.getInt(data.getColumnIndex(Contract.ISUP)) == 1) {
-//            color = ResourcesCompat.getColor(getResources(), R.color.material_green_700, null);
-//        } else {
-//            color = ResourcesCompat.getColor(getResources(), R.color.material_red_700, null);
-//        }
-//        mChangeView.setTextColor(color);
-//        mChangePercentView.setTextColor(color);
+        float rawAbsoluteChange = data.getFloat(Contract.Quote.POSITION_ABSOLUTE_CHANGE);
+        float percentageChange = data.getFloat(Contract.Quote.POSITION_PERCENTAGE_CHANGE);
+        String change = dollarFormatWithPlus.format(rawAbsoluteChange);
+        String percentage = percentageFormat.format(percentageChange / 100);
+
+        mChangeView.setText(change);
+        mChangePercentView.setText("("+percentage+")");
+
+        int color;
+        if (rawAbsoluteChange > 0) {
+            color = ResourcesCompat.getColor(getResources(), R.color.material_green_700, null);
+        } else {
+            color = ResourcesCompat.getColor(getResources(), R.color.material_red_700, null);
+        }
+        mChangeView.setTextColor(color);
+        mChangePercentView.setTextColor(color);
 
         setLabelDetailText(mDaysLowView,
                 getActivity().getString(R.string.detail_stock_days_low_label),
-                data.getString(Contract.Quote.POSITION_DAYS_LOW));
+                dollarFormat.format(data.getFloat(Contract.Quote.POSITION_DAYS_LOW)));
         //mDaysLowView.setText(data.getString(COL_STOCK_DAY_LOW));
 
         //mDaysHighView.setText(data.getString(COL_STOCK_DAY_HIGH));
         setLabelDetailText(mDaysHighView,
                 getActivity().getString(R.string.detail_stock_days_high_label),
-                data.getString(Contract.Quote.POSITION_DAYS_HIGH));
+                dollarFormat.format(data.getFloat(Contract.Quote.POSITION_DAYS_HIGH)));
 
         //mYearLowView.setText(data.getString(COL_STOCK_YEAR_LOW));
         setLabelDetailText(mYearLowView,
                 getActivity().getString(R.string.detail_stock_year_low_label),
-                data.getString(Contract.Quote.POSITION_YEAR_LOW));
+                dollarFormat.format(data.getFloat(Contract.Quote.POSITION_YEAR_LOW)));
         //mYearHighView.setText(data.getString(COL_STOCK_YEAR_HIGH));
         setLabelDetailText(mYearHighView,
                 getActivity().getString(R.string.detail_stock_year_high_label),
-                data.getString(Contract.Quote.POSITION_YEAR_HIGH));
+                dollarFormat.format(data.getFloat(Contract.Quote.POSITION_YEAR_HIGH)));
         //mOpenView.setText(data.getString(COL_STOCK_OPEN));
         setLabelDetailText(mOpenView,
                 getActivity().getString(R.string.detail_stock_open_label),
-                data.getString(Contract.Quote.POSITION_OPEN));
+                dollarFormat.format(data.getFloat(Contract.Quote.POSITION_OPEN)));
         //mCloseView.setText(data.getString(COL_STOCK_CLOSE));
         setLabelDetailText(mCloseView,
                 getActivity().getString(R.string.detail_stock_close_label),
-                data.getString(Contract.Quote.POSITION_PREVIOUS_CLOSE));
+                dollarFormat.format(data.getFloat(Contract.Quote.POSITION_PREVIOUS_CLOSE)));
         //mVolumeView.setText(data.getString(COL_STOCK_VOL));
         setLabelDetailText(mVolumeView,
                 getActivity().getString(R.string.detail_stock_volume_label),
@@ -198,26 +186,6 @@ public class DetailFragment extends Fragment implements LoaderManager.LoaderCall
         setLabelDetailText(mAvgVolumeView,
                 getActivity().getString(R.string.detail_stock_avg_volume_label),
                 data.getString(Contract.Quote.POSITION_AVG_DAILY_VOLUME));
-        //mMarketCapView.setText(data.getString(COL_STOCK_MARKET_CAP));
-        setLabelDetailText(mMarketCapView,
-                getActivity().getString(R.string.detail_stock_market_cap_label),
-                data.getString(Contract.Quote.POSITION_MARKET_CAP));
-        //mDividendView.setText(data.getString(COL_STOCK_DIVIDEND));
-        setLabelDetailText(mDividendView,
-                getActivity().getString(R.string.detail_stock_dividend_label),
-                data.getString(Contract.Quote.POSITION_DIVIDEND_YIELD));
-        //mEPSView.setText(data.getString(COL_STOCK_EPS));
-        setLabelDetailText(mEPSView,
-                getActivity().getString(R.string.detail_stock_eps_label),
-                data.getString(Contract.Quote.POSITION_EPS));
-        //mPEView.setText(data.getString(COL_STOCK_PE));
-        setLabelDetailText(mPEView,
-                getActivity().getString(R.string.detail_stock_pe_label),
-                data.getString(Contract.Quote.POSITION_PE_RATIO));
-        //mOneYrTargetView.setText(data.getString(COL_STOCK_ONE_YR_TGT));
-        setLabelDetailText(mOneYrTargetView,
-                getActivity().getString(R.string.detail_stock_one_yr_target_label),
-                data.getString(Contract.Quote.POSITION_ONE_YEAR_TARGET));
     }
 
     private void setLabelDetailText(View view, String labelTxt, String dataTxt) {
