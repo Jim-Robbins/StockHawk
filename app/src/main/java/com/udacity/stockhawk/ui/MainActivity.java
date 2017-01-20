@@ -27,6 +27,7 @@ import com.udacity.stockhawk.R;
 import com.udacity.stockhawk.data.Contract;
 import com.udacity.stockhawk.data.PrefUtils;
 import com.udacity.stockhawk.sync.QuoteSyncJob;
+import com.udacity.stockhawk.util.Utility;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -121,10 +122,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     }
 
     private boolean networkUp() {
-        ConnectivityManager cm =
-                (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo networkInfo = cm.getActiveNetworkInfo();
-        return networkInfo != null && networkInfo.isConnectedOrConnecting();
+        return Utility.isNetworkAvailable(this);
     }
 
     @Override
