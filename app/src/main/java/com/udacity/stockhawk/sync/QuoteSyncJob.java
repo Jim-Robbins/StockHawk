@@ -6,11 +6,10 @@ import android.content.ComponentName;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
 
 import com.udacity.stockhawk.data.Contract;
 import com.udacity.stockhawk.data.PrefUtils;
+import com.udacity.stockhawk.util.Utility;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -72,63 +71,62 @@ public final class QuoteSyncJob {
             while (iterator.hasNext()) {
                 String symbol = iterator.next();
 
-
                 Stock stock = quotes.get(symbol);
                 StockQuote quote = stock.getQuote();
 
-                float price = quote.getPrice().floatValue();
-                float change = quote.getChange().floatValue();
-                float percentChange = quote.getChangeInPercent().floatValue();
-                float open = quote.getOpen().floatValue();
-                float previousClose = quote.getPreviousClose().floatValue();
-                float averageDailyVolume = quote.getAvgVolume().floatValue();
-                float volume = quote.getVolume().floatValue();
-                float days_high = quote.getDayHigh().floatValue();
-                float days_low = quote.getDayLow().floatValue();
-                float year_high = quote.getYearHigh().floatValue();
-                float year_low = quote.getYearLow().floatValue();
-                TimeZone tz = quote.getTimeZone();
-                Calendar calendar = quote.getLastTradeTime(tz);
-                // WARNING! Don't request historical data for a stock that doesn't exist!
-                // The request will hang forever X_x
-                List<HistoricalQuote> history = stock.getHistory(from, to, Interval.WEEKLY);
+                if (quote.getBid() != null) {
+                    float price = quote.getPrice().floatValue();
+                    float change = quote.getChange().floatValue();
+                    float percentChange = quote.getChangeInPercent().floatValue();
+                    float open = quote.getOpen().floatValue();
+                    float previousClose = quote.getPreviousClose().floatValue();
+                    float averageDailyVolume = quote.getAvgVolume().floatValue();
+                    float volume = quote.getVolume().floatValue();
+                    float days_high = quote.getDayHigh().floatValue();
+                    float days_low = quote.getDayLow().floatValue();
+                    float year_high = quote.getYearHigh().floatValue();
+                    float year_low = quote.getYearLow().floatValue();
+                    TimeZone tz = quote.getTimeZone();
+                    Calendar calendar = quote.getLastTradeTime(tz);
 
-                StringBuilder historyBuilder = new StringBuilder();
+                    // WARNING! Don't request historical data for a stock that doesn't exist!
+                    // The request will hang forever X_x
+                    List<HistoricalQuote> history = stock.getHistory(from, to, Interval.WEEKLY);
 
-                for (HistoricalQuote it : history) {
-                    historyBuilder.append(it.getDate().getTimeInMillis());
-                    historyBuilder.append(", ");
-                    historyBuilder.append(it.getClose());
-                    historyBuilder.append("\n");
+                    StringBuilder historyBuilder = new StringBuilder();
+
+                    for (HistoricalQuote it : history) {
+                        historyBuilder.append(it.getDate().getTimeInMillis());
+                        historyBuilder.append(", ");
+                        historyBuilder.append(it.getClose());
+                        historyBuilder.append("\n");
+                    }
+
+                    ContentValues quoteCV = new ContentValues();
+                    quoteCV.put(Contract.Quote.COLUMN_SYMBOL, symbol);
+                    quoteCV.put(Contract.Quote.COLUMN_PRICE, price);
+                    quoteCV.put(Contract.Quote.COLUMN_PERCENTAGE_CHANGE, percentChange);
+                    quoteCV.put(Contract.Quote.COLUMN_ABSOLUTE_CHANGE, change);
+                    quoteCV.put(Contract.Quote.COLUMN_HISTORY, historyBuilder.toString());
+                    quoteCV.put(Contract.Quote.COLUMN_OPEN, open);
+                    quoteCV.put(Contract.Quote.COLUMN_PREVIOUS_CLOSE, previousClose);
+                    quoteCV.put(Contract.Quote.COLUMN_AVG_DAILY_VOLUME, averageDailyVolume);
+                    quoteCV.put(Contract.Quote.COLUMN_VOLUME, volume);
+                    quoteCV.put(Contract.Quote.COLUMN_DAYS_HIGH, days_high);
+                    quoteCV.put(Contract.Quote.COLUMN_DAYS_LOW, days_low);
+                    quoteCV.put(Contract.Quote.COLUMN_YEAR_HIGH, year_high);
+                    quoteCV.put(Contract.Quote.COLUMN_YEAR_LOW, year_low);
+                    quoteCVs.add(quoteCV);
                 }
 
-                ContentValues quoteCV = new ContentValues();
-                quoteCV.put(Contract.Quote.COLUMN_SYMBOL, symbol);
-                quoteCV.put(Contract.Quote.COLUMN_PRICE, price);
-                quoteCV.put(Contract.Quote.COLUMN_PERCENTAGE_CHANGE, percentChange);
-                quoteCV.put(Contract.Quote.COLUMN_ABSOLUTE_CHANGE, change);
-                quoteCV.put(Contract.Quote.COLUMN_HISTORY, historyBuilder.toString());
-                quoteCV.put(Contract.Quote.COLUMN_OPEN, open);
-                quoteCV.put(Contract.Quote.COLUMN_PREVIOUS_CLOSE, previousClose);
-                quoteCV.put(Contract.Quote.COLUMN_AVG_DAILY_VOLUME, averageDailyVolume);
-                quoteCV.put(Contract.Quote.COLUMN_VOLUME, volume);
-                quoteCV.put(Contract.Quote.COLUMN_DAYS_HIGH, days_high);
-                quoteCV.put(Contract.Quote.COLUMN_DAYS_LOW, days_low);
-                quoteCV.put(Contract.Quote.COLUMN_YEAR_HIGH, year_high);
-                quoteCV.put(Contract.Quote.COLUMN_YEAR_LOW, year_low);
+                context.getContentResolver()
+                        .bulkInsert(
+                                Contract.Quote.URI,
+                                quoteCVs.toArray(new ContentValues[quoteCVs.size()]));
 
-                quoteCVs.add(quoteCV);
-
+                Intent dataUpdatedIntent = new Intent(ACTION_DATA_UPDATED);
+                context.sendBroadcast(dataUpdatedIntent);
             }
-
-            context.getContentResolver()
-                    .bulkInsert(
-                            Contract.Quote.URI,
-                            quoteCVs.toArray(new ContentValues[quoteCVs.size()]));
-
-            Intent dataUpdatedIntent = new Intent(ACTION_DATA_UPDATED);
-            context.sendBroadcast(dataUpdatedIntent);
-
         } catch (IOException exception) {
             Timber.e(exception, "Error fetching stock quotes");
         }
@@ -137,50 +135,33 @@ public final class QuoteSyncJob {
     private static void schedulePeriodic(Context context) {
         Timber.d("Scheduling a periodic task");
 
-
         JobInfo.Builder builder = new JobInfo.Builder(PERIODIC_ID, new ComponentName(context, QuoteJobService.class));
-
-
         builder.setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
                 .setPeriodic(PERIOD)
                 .setBackoffCriteria(INITIAL_BACKOFF, JobInfo.BACKOFF_POLICY_EXPONENTIAL);
 
-
         JobScheduler scheduler = (JobScheduler) context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
-
         scheduler.schedule(builder.build());
     }
 
 
     public static synchronized void initialize(final Context context) {
-
         schedulePeriodic(context);
         syncImmediately(context);
-
     }
 
     public static synchronized void syncImmediately(Context context) {
 
-        ConnectivityManager cm =
-                (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo networkInfo = cm.getActiveNetworkInfo();
-        if (networkInfo != null && networkInfo.isConnectedOrConnecting()) {
+        if (Utility.isNetworkAvailable(context)) {
             Intent nowIntent = new Intent(context, QuoteIntentService.class);
             context.startService(nowIntent);
         } else {
-
             JobInfo.Builder builder = new JobInfo.Builder(ONE_OFF_ID, new ComponentName(context, QuoteJobService.class));
-
-
             builder.setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
                     .setBackoffCriteria(INITIAL_BACKOFF, JobInfo.BACKOFF_POLICY_EXPONENTIAL);
 
-
             JobScheduler scheduler = (JobScheduler) context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
-
             scheduler.schedule(builder.build());
-
-
         }
     }
 
