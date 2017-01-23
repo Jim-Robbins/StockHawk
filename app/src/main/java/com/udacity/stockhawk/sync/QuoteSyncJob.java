@@ -71,10 +71,14 @@ public final class QuoteSyncJob {
             while (iterator.hasNext()) {
                 String symbol = iterator.next();
 
-                Stock stock = quotes.get(symbol);
-                StockQuote quote = stock.getQuote();
+                Timber.d(symbol);
 
-                if (quote.getBid() != null) {
+                Stock stock = quotes.get(symbol);
+                Timber.d(stock.toString());
+                StockQuote quote = stock.getQuote();
+                Timber.d(quote.toString());
+
+                if (quote.getPrice() != null) {
                     float price = quote.getPrice().floatValue();
                     float change = quote.getChange().floatValue();
                     float percentChange = quote.getChangeInPercent().floatValue();
@@ -86,8 +90,6 @@ public final class QuoteSyncJob {
                     float days_low = quote.getDayLow().floatValue();
                     float year_high = quote.getYearHigh().floatValue();
                     float year_low = quote.getYearLow().floatValue();
-                    TimeZone tz = quote.getTimeZone();
-                    Calendar calendar = quote.getLastTradeTime(tz);
 
                     // WARNING! Don't request historical data for a stock that doesn't exist!
                     // The request will hang forever X_x
@@ -116,7 +118,10 @@ public final class QuoteSyncJob {
                     quoteCV.put(Contract.Quote.COLUMN_DAYS_LOW, days_low);
                     quoteCV.put(Contract.Quote.COLUMN_YEAR_HIGH, year_high);
                     quoteCV.put(Contract.Quote.COLUMN_YEAR_LOW, year_low);
+                    quoteCV.put(Contract.Quote.COLUMN_CREATED, Calendar.getInstance().getTimeInMillis());
                     quoteCVs.add(quoteCV);
+                } else {
+                    PrefUtils.removeStock(context, symbol);
                 }
 
                 context.getContentResolver()

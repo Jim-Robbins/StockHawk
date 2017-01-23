@@ -10,6 +10,8 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
+import timber.log.Timber;
+
 public final class PrefUtils {
 
     private PrefUtils() {
@@ -18,23 +20,34 @@ public final class PrefUtils {
     public static Set<String> getStocks(Context context) {
         String stocksKey = context.getString(R.string.pref_stocks_key);
         String initializedKey = context.getString(R.string.pref_stocks_initialized_key);
-        String[] defaultStocksList = context.getResources().getStringArray(R.array.default_stocks);
 
-        HashSet<String> defaultStocks = new HashSet<>(Arrays.asList(defaultStocksList));
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-
-
         boolean initialized = prefs.getBoolean(initializedKey, false);
 
         if (!initialized) {
             SharedPreferences.Editor editor = prefs.edit();
             editor.putBoolean(initializedKey, true);
-            editor.putStringSet(stocksKey, defaultStocks);
             editor.apply();
-            return defaultStocks;
+            addDefaultStocks(context, stocksKey);
         }
-        return prefs.getStringSet(stocksKey, new HashSet<String>());
 
+        return prefs.getStringSet(stocksKey, new HashSet<String>());
+    }
+
+    private static void addDefaultStocks(Context context, String key) {
+        String[] defaultStocksList = context.getResources().getStringArray(R.array.default_stocks);
+        HashSet<String> defaultStocks = new HashSet<>(Arrays.asList(defaultStocksList));
+        editStocksPref(context, key, defaultStocks);
+    }
+
+    private static void editStocksPref(Context context, String key, Set<String> stocks) {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        SharedPreferences.Editor editor = prefs.edit();
+        //Removing the key is the only way to ensure data syncs after hard stop
+        editor.remove(key);
+        editor.apply();
+        editor.putStringSet(key, stocks);
+        editor.apply();
     }
 
     private static void editStockPref(Context context, String symbol, Boolean add) {
@@ -47,10 +60,7 @@ public final class PrefUtils {
             stocks.remove(symbol);
         }
 
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-        SharedPreferences.Editor editor = prefs.edit();
-        editor.putStringSet(key, stocks);
-        editor.apply();
+        editStocksPref(context, key, stocks);
     }
 
     public static void addStock(Context context, String symbol) {

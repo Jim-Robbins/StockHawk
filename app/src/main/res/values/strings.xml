@@ -54,7 +54,7 @@
     <string name="pref_ticker_status_key">pref_ticker_status</string>
     <string name="input_symbol_added">New Ticker Symbol Added</string>
     <string name="action_retry">Retry</string>
-    <string name="detail_stock_current_price_label">Current Price:</string>
+    <string name="detail_stock_current_price_label">Current Price</string>
     <string name="detail_stock_key_stats_label">Key Statistics</string>
     <string name="detail_stock_days_low_label">Day Low</string>
     <string name="detail_stock_year_low_label">52w Low</string>
@@ -69,4 +69,5 @@
     <string name="detail_stock_one_yr_target_label">1Y Target</string>
     <string name="detail_stock_pe_label">P/E</string>
     <string name="detail_stock_eps_label">EPS</string>
+    <string name="detail_chart_detail">Historical stock chart</string>
 </resources>

@@ -10,18 +10,43 @@ import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
 import android.support.v4.content.res.ResourcesCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import com.github.mikephil.charting.charts.LineChart;
+import com.github.mikephil.charting.components.AxisBase;
+import com.github.mikephil.charting.components.Description;
+import com.github.mikephil.charting.components.XAxis;
+import com.github.mikephil.charting.components.YAxis;
+import com.github.mikephil.charting.data.Entry;
+import com.github.mikephil.charting.data.LineData;
+import com.github.mikephil.charting.data.LineDataSet;
+import com.github.mikephil.charting.formatter.IAxisValueFormatter;
 import com.udacity.stockhawk.data.Contract;
 import com.udacity.stockhawk.R;
+import com.udacity.stockhawk.util.Utility;
 
+import java.security.Timestamp;
+import java.text.DateFormat;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
 import java.util.Locale;
+import java.util.TimeZone;
+
+import static android.R.attr.entries;
+import static com.udacity.stockhawk.R.id.chart;
+import static com.udacity.stockhawk.R.id.detail_stock_timestamp;
 
 public class DetailFragment extends Fragment implements LoaderManager.LoaderCallbacks<Cursor> {
 
@@ -36,6 +61,7 @@ public class DetailFragment extends Fragment implements LoaderManager.LoaderCall
     private TextView mBidPriceView;
     private TextView mChangeView;
     private TextView mChangePercentView;
+    private TextView mTimeStamp;
     private LinearLayout mDaysLowView;
     private LinearLayout mDaysHighView;
     private LinearLayout mYearLowView;
@@ -44,6 +70,7 @@ public class DetailFragment extends Fragment implements LoaderManager.LoaderCall
     private LinearLayout mCloseView;
     private LinearLayout mVolumeView;
     private LinearLayout mAvgVolumeView;
+    private LineChart mLineChart;
 
     private DecimalFormat dollarFormatWithPlus;
     private DecimalFormat dollarFormat;
@@ -52,13 +79,9 @@ public class DetailFragment extends Fragment implements LoaderManager.LoaderCall
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        dollarFormat = (DecimalFormat) NumberFormat.getCurrencyInstance(Locale.US);
-        dollarFormatWithPlus = (DecimalFormat) NumberFormat.getCurrencyInstance(Locale.US);
-        dollarFormatWithPlus.setPositivePrefix("+$");
-        percentageFormat = (DecimalFormat) NumberFormat.getPercentInstance(Locale.getDefault());
-        percentageFormat.setMaximumFractionDigits(2);
-        percentageFormat.setMinimumFractionDigits(2);
-        percentageFormat.setPositivePrefix("+");
+        dollarFormat = Utility.getDollarFormat();
+        dollarFormatWithPlus = Utility.getDollarFormatWithPlus();
+        percentageFormat = Utility.getPercentageFormat();
 
         Bundle arguments = getArguments();
         if (arguments != null) {
@@ -71,6 +94,7 @@ public class DetailFragment extends Fragment implements LoaderManager.LoaderCall
         mBidPriceView = (TextView) rootView.findViewById(R.id.detail_stock_bid_price);
         mChangeView = (TextView) rootView.findViewById(R.id.detail_stock_change);
         mChangePercentView = (TextView) rootView.findViewById(R.id.detail_stock_change_percent);
+        mTimeStamp = (TextView) rootView.findViewById(R.id.detail_stock_timestamp);
         mDaysLowView = (LinearLayout) rootView.findViewById(R.id.detail_stock_days_low);
         mDaysHighView = (LinearLayout) rootView.findViewById(R.id.detail_stock_days_high);
         mYearLowView = (LinearLayout) rootView.findViewById(R.id.detail_stock_year_low);
@@ -79,6 +103,8 @@ public class DetailFragment extends Fragment implements LoaderManager.LoaderCall
         mCloseView = (LinearLayout) rootView.findViewById(R.id.detail_stock_close);
         mVolumeView = (LinearLayout) rootView.findViewById(R.id.detail_stock_vol);
         mAvgVolumeView = (LinearLayout) rootView.findViewById(R.id.detail_stock_avg_vol);
+
+        mLineChart = (LineChart) rootView.findViewById(chart);
 
         return rootView;
     }
@@ -132,7 +158,8 @@ public class DetailFragment extends Fragment implements LoaderManager.LoaderCall
     }
 
     private void setTextViews(Cursor data) {
-        mSymbolView.setText(data.getString(Contract.Quote.POSITION_SYMBOL));
+        String stockSymbol = data.getString(Contract.Quote.POSITION_SYMBOL);
+        mSymbolView.setText(stockSymbol);
         mBidPriceView.setText(dollarFormat.format(data.getFloat(Contract.Quote.POSITION_PRICE)));
 
         float rawAbsoluteChange = data.getFloat(Contract.Quote.POSITION_ABSOLUTE_CHANGE);
@@ -151,6 +178,11 @@ public class DetailFragment extends Fragment implements LoaderManager.LoaderCall
         }
         mChangeView.setTextColor(color);
         mChangePercentView.setTextColor(color);
+
+        SimpleDateFormat sdf = new SimpleDateFormat("h:mm:ss a z  -  MMM d, yyyy", Locale.getDefault());
+        Date quoteDate = new Date(data.getLong(Contract.Quote.POSITION_CREATED));
+
+        mTimeStamp.setText( sdf.format(quoteDate).toString());
 
         setLabelDetailText(mDaysLowView,
                 getActivity().getString(R.string.detail_stock_days_low_label),
@@ -186,6 +218,48 @@ public class DetailFragment extends Fragment implements LoaderManager.LoaderCall
         setLabelDetailText(mAvgVolumeView,
                 getActivity().getString(R.string.detail_stock_avg_volume_label),
                 data.getString(Contract.Quote.POSITION_AVG_DAILY_VOLUME));
+
+        List<String> items = Arrays.asList(data.getString(Contract.Quote.POSITION_HISTORY).split("\\r?\\n"));
+        displayChart(items, stockSymbol);
+    }
+
+    private void displayChart(List<String> items, String stockSymbol) {
+        XAxis xAxis = mLineChart.getXAxis();
+        xAxis.setTextSize(11f);
+
+        final ArrayList<String> xVals = new ArrayList<>();
+        ArrayList<Entry> quoteVals = new ArrayList<>();
+
+        Collections.reverse(items);
+
+        for (int i = 0; i < items.size(); i++) {
+            String[] stockData = items.get(i).split(",");
+            DateFormat df = new SimpleDateFormat("MMM ''yy");
+            String formattedDate = df.format(Long.valueOf(stockData[0]));
+            xVals.add(i, formattedDate);
+            quoteVals.add(new Entry(i, Float.valueOf(stockData[1])));
+        }
+
+        IAxisValueFormatter xAxisFormatter = new IAxisValueFormatter() {
+
+            @Override
+            public String getFormattedValue(float value, AxisBase axis) {
+                return xVals.get((int) value);
+            }
+        };
+
+        xAxis.setValueFormatter(xAxisFormatter);
+
+        LineDataSet dataSet = new LineDataSet(quoteVals, stockSymbol);
+        LineData lineData = new LineData(dataSet);
+        Description lineDesc = new Description();
+        lineDesc.setText(getActivity().getString(R.string.detail_chart_detail));
+        mLineChart.setData(lineData);
+        mLineChart.setContentDescription(getActivity().getString(R.string.detail_chart_detail));
+        mLineChart.setDescription(lineDesc);
+        mLineChart.getLegend().setTextSize(12f);
+        mLineChart.setPinchZoom(false);
+        mLineChart.invalidate();
     }
 
     private void setLabelDetailText(View view, String labelTxt, String dataTxt) {

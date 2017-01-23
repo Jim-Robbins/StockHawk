@@ -48,12 +48,13 @@ public final class Contract {
         public static final int POSITION_DAYS_LOW = 11;
         public static final int POSITION_YEAR_HIGH = 12;
         public static final int POSITION_YEAR_LOW = 13;
-        public static final int POSITION_MARKET_CAP = 14;
-        public static final int POSITION_DIVIDEND_YIELD = 15;
-        public static final int POSITION_EPS = 16;
-        public static final int POSITION_PE_RATIO = 17;
-        public static final int POSITION_ONE_YEAR_TARGET = 18;
-        public static final int POSITION_CREATED = 19;
+        public static final int POSITION_CREATED = 14;
+        public static final int POSITION_MARKET_CAP = 15;
+        public static final int POSITION_DIVIDEND_YIELD = 16;
+        public static final int POSITION_EPS = 17;
+        public static final int POSITION_PE_RATIO = 18;
+        public static final int POSITION_ONE_YEAR_TARGET = 19;
+
         public static final ImmutableList<String> QUOTE_COLUMNS = ImmutableList.of(
                 _ID,
                 COLUMN_SYMBOL,

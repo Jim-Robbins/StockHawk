@@ -33,41 +33,48 @@
         tools:text="118.10"
         style="@style/DetailBidPriceTextStyle"/>
 
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal">
-
-        <TextView
-            android:id="@+id/detail_stock_current_price_label"
-            android:layout_width="0dp"
-            android:layout_weight="11"
-            android:layout_height="wrap_content"
-            android:text="@string/detail_stock_current_price_label"
-            style="@style/LabelTextStyle"/>
+        android:orientation="horizontal"
+        android:layout_marginBottom="@dimen/normal_space">
 
         <TextView
             android:id="@+id/detail_stock_change"
-            android:layout_width="0dp"
-            android:layout_weight="7"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             tools:text="-$99.99"
-            style="@style/PercentChangeTextStyle"/>
+            style="@style/PercentChangeTextStyle"
+            android:textAlignment="textEnd" />
 
         <TextView
             android:id="@+id/detail_stock_change_percent"
-            android:layout_width="0dp"
-            android:layout_weight="9"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:paddingLeft="@dimen/small_space"
+            android:paddingStart="@dimen/small_space"
+            android:paddingEnd="@dimen/small_space"
+            android:paddingRight="@dimen/small_space"
             tools:text="(-99.99%)"
-            style="@style/PercentChangeTextStyle"/>
+            style="@style/PercentChangeTextStyle"
+            android:textAlignment="viewStart" />
+
+        <TextView
+            android:id="@+id/detail_stock_timestamp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="12:50 PM EST"
+            style="@style/DetailTimeStamp"/>
     </LinearLayout>
-    <TextView
-        android:id="@+id/detail_stock_timestamp"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="12:50 PM EST"
-        style="@style/DetailTimeStamp"/>
+
+
+    <com.github.mikephil.charting.charts.LineChart
+        android:id="@+id/chart"
+        android:layout_width="match_parent"
+        android:layout_height="200dp"
+        android:contentDescription="@string/detail_chart_detail"/>
+
 
     <TextView
         android:id="@+id/detail_stock_key_stats_label"
