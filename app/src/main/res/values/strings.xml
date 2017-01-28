@@ -70,4 +70,8 @@
     <string name="detail_stock_pe_label">P/E</string>
     <string name="detail_stock_eps_label">EPS</string>
     <string name="detail_chart_detail">Historical stock chart</string>
+
+    <!-- Strings related to Widgets -->
+    <string name="title_widget">Stock Hawk</string>
+    <string name="title_widget_detail">Stock Quotes</string>
 </resources>

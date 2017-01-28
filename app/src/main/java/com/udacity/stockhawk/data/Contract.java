@@ -72,7 +72,16 @@ public final class Contract {
                 COLUMN_YEAR_LOW,
                 COLUMN_CREATED
         );
-        static final String TABLE_NAME = "quotes";
+
+        public static final ImmutableList<String> WIDGET_COLUMNS = ImmutableList.of(
+                _ID,
+                COLUMN_SYMBOL,
+                COLUMN_PRICE,
+                COLUMN_ABSOLUTE_CHANGE,
+                COLUMN_PERCENTAGE_CHANGE
+        );
+
+        public static final String TABLE_NAME = "quotes";
 
         public static Uri makeUriForStock(String symbol) {
             return URI.buildUpon().appendPath(symbol).build();
