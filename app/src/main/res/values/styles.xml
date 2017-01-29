@@ -50,4 +50,16 @@
         <item name="android:textSize">@dimen/small_font_size</item>
     </style>
 
+    <style name="WidgetPercentChangeTextStyle" parent="@style/PercentChangeTextStyle">
+        <item name="android:textSize">12sp</item>
+    </style>
+
+    <style name="WidgetBidPriceTextStyle" parent="@style/BidPriceTextStyle">
+        <item name="android:textSize">12sp</item>
+    </style>
+
+    <style name="WidgetStockSymbolTextStyle" parent="@style/StockSymbolTextStyle">
+        <item name="android:textSize">14sp</item>
+    </style>
+
 </resources>

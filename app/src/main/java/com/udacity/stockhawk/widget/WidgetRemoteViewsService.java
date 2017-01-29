@@ -3,6 +3,7 @@ package com.udacity.stockhawk.widget;
 import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
+import android.net.Uri;
 import android.os.Binder;
 import android.util.Log;
 import android.widget.AdapterView;
@@ -69,7 +70,8 @@ public class WidgetRemoteViewsService extends RemoteViewsService {
                 return null;
             }
             RemoteViews views = new RemoteViews(getPackageName(), R.layout.widget_list_item_quote);
-            views.setTextViewText(R.id.stock_symbol, data.getString(Contract.Quote.POSITION_SYMBOL));
+            String stockSymbol = data.getString(Contract.Quote.POSITION_SYMBOL);
+            views.setTextViewText(R.id.stock_symbol, stockSymbol);
             views.setTextViewText(R.id.price, Utility.getDollarFormat().format(data.getFloat(Contract.Quote.POSITION_PRICE)));
 
             float rawAbsoluteChange = data.getFloat(Contract.Quote.POSITION_ABSOLUTE_CHANGE);
@@ -91,6 +93,10 @@ public class WidgetRemoteViewsService extends RemoteViewsService {
             } else {
                 views.setTextViewText(R.id.change, percentage);
             }
+
+            final Intent fillInIntent = new Intent();
+            fillInIntent.setData(Contract.Quote.makeUriForStock(stockSymbol));
+            views.setOnClickFillInIntent(R.id.widget_list_item, fillInIntent);
 
             return views;
         }
