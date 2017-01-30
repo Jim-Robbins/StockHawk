@@ -10,18 +10,15 @@ import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
 import android.support.v4.content.res.ResourcesCompat;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import com.github.mikephil.charting.charts.LineChart;
 import com.github.mikephil.charting.components.AxisBase;
 import com.github.mikephil.charting.components.Description;
 import com.github.mikephil.charting.components.XAxis;
-import com.github.mikephil.charting.components.YAxis;
 import com.github.mikephil.charting.data.Entry;
 import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.LineDataSet;
@@ -30,23 +27,17 @@ import com.udacity.stockhawk.data.Contract;
 import com.udacity.stockhawk.R;
 import com.udacity.stockhawk.util.Utility;
 
-import java.security.Timestamp;
 import java.text.DateFormat;
 import java.text.DecimalFormat;
-import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
-import java.util.TimeZone;
 
-import static android.R.attr.entries;
 import static com.udacity.stockhawk.R.id.chart;
-import static com.udacity.stockhawk.R.id.detail_stock_timestamp;
 
 public class DetailFragment extends Fragment implements LoaderManager.LoaderCallbacks<Cursor> {
 
@@ -62,14 +53,14 @@ public class DetailFragment extends Fragment implements LoaderManager.LoaderCall
     private TextView mChangeView;
     private TextView mChangePercentView;
     private TextView mTimeStamp;
-    private LinearLayout mDaysLowView;
-    private LinearLayout mDaysHighView;
-    private LinearLayout mYearLowView;
-    private LinearLayout mYearHighView;
-    private LinearLayout mOpenView;
-    private LinearLayout mCloseView;
-    private LinearLayout mVolumeView;
-    private LinearLayout mAvgVolumeView;
+    private View mDaysLowView;
+    private View mDaysHighView;
+    private View mYearLowView;
+    private View mYearHighView;
+    private View mOpenView;
+    private View mCloseView;
+    private View mVolumeView;
+    private View mAvgVolumeView;
     private LineChart mLineChart;
 
     private DecimalFormat dollarFormatWithPlus;
@@ -95,14 +86,14 @@ public class DetailFragment extends Fragment implements LoaderManager.LoaderCall
         mChangeView = (TextView) rootView.findViewById(R.id.detail_stock_change);
         mChangePercentView = (TextView) rootView.findViewById(R.id.detail_stock_change_percent);
         mTimeStamp = (TextView) rootView.findViewById(R.id.detail_stock_timestamp);
-        mDaysLowView = (LinearLayout) rootView.findViewById(R.id.detail_stock_days_low);
-        mDaysHighView = (LinearLayout) rootView.findViewById(R.id.detail_stock_days_high);
-        mYearLowView = (LinearLayout) rootView.findViewById(R.id.detail_stock_year_low);
-        mYearHighView = (LinearLayout) rootView.findViewById(R.id.detail_stock_year_high);
-        mOpenView = (LinearLayout) rootView.findViewById(R.id.detail_stock_open);
-        mCloseView = (LinearLayout) rootView.findViewById(R.id.detail_stock_close);
-        mVolumeView = (LinearLayout) rootView.findViewById(R.id.detail_stock_vol);
-        mAvgVolumeView = (LinearLayout) rootView.findViewById(R.id.detail_stock_avg_vol);
+        mDaysLowView = rootView.findViewById(R.id.detail_stock_days_low);
+        mDaysHighView = rootView.findViewById(R.id.detail_stock_days_high);
+        mYearLowView = rootView.findViewById(R.id.detail_stock_year_low);
+        mYearHighView = rootView.findViewById(R.id.detail_stock_year_high);
+        mOpenView = rootView.findViewById(R.id.detail_stock_open);
+        mCloseView = rootView.findViewById(R.id.detail_stock_close);
+        mVolumeView = rootView.findViewById(R.id.detail_stock_vol);
+        mAvgVolumeView = rootView.findViewById(R.id.detail_stock_avg_vol);
 
         mLineChart = (LineChart) rootView.findViewById(chart);
 
@@ -172,7 +163,7 @@ public class DetailFragment extends Fragment implements LoaderManager.LoaderCall
 
         int color;
         if (rawAbsoluteChange > 0) {
-            color = ResourcesCompat.getColor(getResources(), R.color.material_green_700, null);
+            color = ResourcesCompat.getColor(getResources(), R.color.material_green_A700, null);
         } else {
             color = ResourcesCompat.getColor(getResources(), R.color.material_red_700, null);
         }

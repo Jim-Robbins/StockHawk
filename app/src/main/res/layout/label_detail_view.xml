@@ -1,26 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="@drawable/bottom_border"
     android:orientation="horizontal"
-    android:paddingBottom="@dimen/med_space"
-    android:paddingTop="@dimen/med_space">
+    android:padding="@dimen/med_space">
 
     <TextView
         android:id="@+id/detail_text_label"
-        style="@style/LabelTextStyleIndented"
-        android:layout_width="0dp"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_weight="1" />
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true" />
 
     <TextView
         android:id="@+id/detail_text_data"
-        android:layout_width="0dp"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:gravity="right|end"
-        android:paddingEnd="@dimen/med_space"
-        android:paddingRight="@dimen/med_space" />
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentRight="true" />
 
-</LinearLayout>
+</RelativeLayout>

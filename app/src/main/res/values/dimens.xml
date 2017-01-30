@@ -25,6 +25,11 @@
     <dimen name="med_space">8dp</dimen>
     <dimen name="small_space">4dp</dimen>
 
+    <dimen name="pill_corner_radius">4dp</dimen>
+    <dimen name="fab_icon_size">24dp</dimen>
+    <dimen name="fab_elevation">6dp</dimen>
+    <dimen name="fab_press_translation">12dp</dimen>
+
     <!-- Widget Sizes -->
     <dimen name="widget_margin">4dp</dimen>
     <dimen name="widget_icon">24dp</dimen>

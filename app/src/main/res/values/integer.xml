@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <integer name="column_weight">12</integer>
+    <integer name="fab_view_size">24</integer>
 </resources>
