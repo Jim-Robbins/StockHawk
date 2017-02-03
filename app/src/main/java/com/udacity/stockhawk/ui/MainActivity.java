@@ -1,10 +1,7 @@
 package com.udacity.stockhawk.ui;
 
-import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.v4.app.LoaderManager;
@@ -38,9 +35,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         StockAdapter.StockAdapterOnClickHandler {
 
     private String LOG_TAG = MainActivity.class.getSimpleName();
-    private static final String STOCKFRAGMENT_TAG = "STKTAG";
-    private boolean mTwoPane;
-    private Intent mStockDetailIntent;
 
     private static final int STOCK_LOADER = 0;
     @SuppressWarnings("WeakerAccess")
@@ -60,28 +54,10 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         Uri contentUri = Contract.Quote.makeUriForStock(symbol);
 
         Log.d(LOG_TAG, contentUri.toString());
-        if (mTwoPane) {
-            // In two-pane mode, show the detail view in this activity by
-            // adding or replacing the detail fragment using a
-            // fragment transaction.
-            Bundle args = new Bundle();
-            args.putParcelable(DetailFragment.DETAIL_URI, contentUri);
 
-            DetailFragment fragment = new DetailFragment();
-            fragment.setArguments(args);
-
-            getSupportFragmentManager().beginTransaction()
-                    .replace(R.id.stock_detail_container, fragment, STOCKFRAGMENT_TAG)
-                    .commit();
-        } else {
-            Intent intent = new Intent(this, DetailActivity.class)
-                    .setData(contentUri);
-            startActivity(intent);
-//            ActivityOptionsCompat activityOptions =
-//                    ActivityOptionsCompat.makeSceneTransitionAnimation(this,
-//                            new Pair<View, String>(vh.mIconView, getString(R.string.detail_icon_transition_name)));
-//            ActivityCompat.startActivity(this, intent, activityOptions.toBundle());
-        }
+        Intent intent = new Intent(this, DetailActivity.class)
+                .setData(contentUri);
+        startActivity(intent);
     }
 
     @Override
